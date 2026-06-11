@@ -28,16 +28,12 @@ jobs:
 
     - name: 部署到服务器
       uses: appleboy/ssh-action@master
-      env:
-        SERVER_IP: ${{ secrets.SERVER_IP }}
-        SERVER_USER: ${{ secrets.SERVER_USER }}
-        REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
       with:
         host: ${{ secrets.SERVER_IP }}
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          mkdir -p ${{ secrets.REMOTE_DIR }}/{frontend,server,uploads,logs}
+          mkdir -p /var/www/portfolio/{frontend,server,uploads,logs}
 
     - name: 上传前端文件
       uses: appleboy/scp-action@master
