@@ -56,15 +56,6 @@ jobs:
         target: ${{ secrets.REMOTE_DIR }}/server/
         strip_components: 1
 
-    - name: 上传 Nginx 配置
-      uses: appleboy/scp-action@master
-      with:
-        host: ${{ secrets.SERVER_IP }}
-        username: ${{ secrets.SERVER_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: "nginx.conf"
-        target: "/etc/nginx/conf.d/portfolio.conf"
-
     - name: 重启服务
       uses: appleboy/ssh-action@master
       with:
@@ -74,6 +65,35 @@ jobs:
         script: |
           cd /var/www/portfolio/server
           npm install --production
+
+          # 更新 Nginx 配置
+          cat > /etc/nginx/conf.d/portfolio.conf << 'EOFNGINX'
+          server {
+              listen 80;
+              server_name _;
+              root /var/www/portfolio/frontend;
+              index index.html;
+
+              location /uploads/ {
+                  alias /var/www/portfolio/uploads/;
+                  expires 30d;
+                  add_header Cache-Control "public, immutable";
+              }
+
+              location /api/ {
+                  proxy_pass http://127.0.0.1:3000;
+                  proxy_http_version 1.1;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  client_max_body_size 15m;
+              }
+
+              location / {
+                  try_files $uri $uri/ /index.html;
+              }
+          }
+          EOFNGINX
 
           # 重载 Nginx
           nginx -t && systemctl reload nginx || true
