@@ -43,15 +43,15 @@ export const siteConfig = {
 
   // ── 作品集 ────────────────────────────────
   works: [
-    { id: 1, category: 'photo',        title: '城市光影',     img: 'https://picsum.photos/seed/p1/800/600',  featured: true },
-    { id: 2, category: 'design',       title: '品牌视觉系统', img: 'https://picsum.photos/seed/d1/600/450' },
-    { id: 3, category: 'illustration', title: '抽象系列 Vol.1', img: 'https://picsum.photos/seed/i1/600/450' },
-    { id: 4, category: 'photo',        title: '人像纪实',     img: 'https://picsum.photos/seed/p2/600/450' },
-    { id: 5, category: 'design',       title: '杂志版式设计', img: 'https://picsum.photos/seed/d2/600/450' },
-    { id: 6, category: 'photo',        title: '建筑线条',     img: 'https://picsum.photos/seed/p3/600/800',  tall: true },
-    { id: 7, category: 'illustration', title: '数字插画系列', img: 'https://picsum.photos/seed/i2/600/450' },
-    { id: 8, category: 'other',        title: '动态影像截帧', img: 'https://picsum.photos/seed/o1/600/450' },
-    { id: 9, category: 'design',       title: '产品包装设计', img: 'https://picsum.photos/seed/d3/600/450' },
+    { id: 1, category: 'photo',        title: '城市光影',     img: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=800&h=600&fit=crop',  featured: true },
+    { id: 2, category: 'design',       title: '品牌视觉系统', img: 'https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=600&h=450&fit=crop' },
+    { id: 3, category: 'illustration', title: '抽象系列 Vol.1', img: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600&h=450&fit=crop' },
+    { id: 4, category: 'photo',        title: '人像纪实',     img: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=600&h=450&fit=crop' },
+    { id: 5, category: 'design',       title: '杂志版式设计', img: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&h=450&fit=crop' },
+    { id: 6, category: 'photo',        title: '建筑线条',     img: 'https://images.unsplash.com/photo-1487958449943-2429e8be8625?w=600&h=800&fit=crop',  tall: true },
+    { id: 7, category: 'illustration', title: '数字插画系列', img: 'https://images.unsplash.com/photo-1561998338-13ad7883b20f?w=600&h=450&fit=crop' },
+    { id: 8, category: 'other',        title: '动态影像截帧', img: 'https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?w=600&h=450&fit=crop' },
+    { id: 9, category: 'design',       title: '产品包装设计', img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=450&fit=crop' },
   ],
 
   // ── 简历 ──────────────────────────────────
