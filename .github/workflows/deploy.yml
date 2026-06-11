@@ -1,0 +1,89 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+
+    - name: 设置 Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: 安装依赖并构建
+      run: |
+        npm install
+        npm run build
+
+    - name: 部署到服务器
+      uses: appleboy/ssh-action@master
+      env:
+        SERVER_IP: ${{ secrets.SERVER_IP }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          mkdir -p ${{ secrets.REMOTE_DIR }}/{frontend,server,uploads,logs}
+
+    - name: 上传前端文件
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "dist/*"
+        target: ${{ secrets.REMOTE_DIR }}/frontend/
+        strip_components: 1
+        rm: true
+
+    - name: 上传后端文件
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "server/index.js,server/package.json"
+        target: ${{ secrets.REMOTE_DIR }}/server/
+        strip_components: 1
+
+    - name: 上传 Nginx 配置
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "nginx.conf"
+        target: "/etc/nginx/conf.d/portfolio.conf"
+
+    - name: 重启服务
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          cd /var/www/portfolio/server
+          npm install --production
+
+          # 重载 Nginx
+          nginx -t && systemctl reload nginx || true
+
+          # 重启 PM2
+          pm2 restart portfolio || pm2 start index.js --name portfolio
+          pm2 save
+
+          echo "✓ 部署完成"

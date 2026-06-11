@@ -1,0 +1,66 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  SERVER_IP: "8.134.188.153"
+  SERVER_USER: "root"
+  REMOTE_DIR: "/var/www/portfolio"
+
+# 构建前端
+build:
+  stage: build
+  image: node:18
+  cache:
+    paths:
+      - node_modules/
+  script:
+    - npm install
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 hour
+  only:
+    - main
+    - master
+
+# 部署到服务器
+deploy:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    # 安装 SSH 和 rsync
+    - apk add --no-cache openssh-client rsync
+    # 配置 SSH 密钥（从 GitLab CI/CD Variables 中获取）
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts
+  script:
+    # 上传前端构建产物
+    - rsync -avz --delete dist/ $SERVER_USER@$SERVER_IP:$REMOTE_DIR/frontend/
+
+    # 上传后端代码
+    - rsync -avz server/index.js server/package.json $SERVER_USER@$SERVER_IP:$REMOTE_DIR/server/
+
+    # 上传 Nginx 配置
+    - scp nginx.conf $SERVER_USER@$SERVER_IP:/etc/nginx/conf.d/portfolio.conf
+
+    # 服务器端操作
+    - |
+      ssh $SERVER_USER@$SERVER_IP << 'EOF'
+        cd /var/www/portfolio/server
+        npm install --production
+
+        # 重载 Nginx
+        nginx -t && systemctl reload nginx || true
+
+        # 重启 PM2
+        pm2 restart portfolio || pm2 start index.js --name portfolio
+        pm2 save
+      EOF
+  only:
+    - main
+    - master
+  when: manual  # 手动触发，改为 on_success 则自动部署

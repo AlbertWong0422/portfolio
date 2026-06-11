@@ -1,0 +1,134 @@
+# GitHub 部署快速指南
+
+## 当前进度：步骤 4
+
+### 在本地项目目录执行以下命令：
+
+```bash
+# 初始化 Git（如果还没有）
+git init
+
+# 添加所有文件
+git add .
+
+# 提交
+git commit -m "Initial commit"
+
+# 添加 GitHub 远程仓库（替换成你的用户名和仓库名）
+git remote add origin https://github.com/YOUR_USERNAME/portfolio.git
+
+# 推送到 GitHub
+git branch -M main
+git push -u origin main
+```
+
+---
+
+## 下一步：配置 GitHub Secrets
+
+1. 打开你的 GitHub 仓库页面
+2. 点击 **Settings** → **Secrets and variables** → **Actions**
+3. 点击 **New repository secret**，添加以下 4 个密钥：
+
+### Secret 1: SSH_PRIVATE_KEY
+```
+名称: SSH_PRIVATE_KEY
+值: （复制下面完整的私钥内容，包括 BEGIN 和 END 行）
+```
+
+```
+-----BEGIN OPENSSH PRIVATE KEY-----
+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
+-----END OPENSSH PRIVATE KEY-----
+```
+
+### Secret 2: SERVER_IP
+```
+名称: SERVER_IP
+值: 8.134.188.153
+```
+
+### Secret 3: SERVER_USER
+```
+名称: SERVER_USER
+值: root
+```
+
+### Secret 4: REMOTE_DIR
+```
+名称: REMOTE_DIR
+值: /var/www/portfolio
+```
+
+---
+
+## 完成部署
+
+配置完 Secrets 后：
+
+1. 每次推送代码到 `main` 分支都会自动触发部署
+2. 也可以手动触发：进入仓库 → **Actions** → 选择 workflow → **Run workflow**
+
+### 查看部署状态
+
+进入仓库 → **Actions**，可以看到部署的实时日志。
+
+---
+
+## 测试部署
+
+```bash
+# 修改一个文件测试
+echo "# Portfolio" > README.md
+git add README.md
+git commit -m "Update README"
+git push origin main
+```
+
+然后到 GitHub Actions 查看部署进度！
