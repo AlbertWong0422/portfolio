@@ -34,9 +34,10 @@
 <script setup>
 import { computed } from 'vue'
 import { siteConfig } from '../config.js'
+import { siteData } from '../store.js'
 
-const config = siteConfig
-const featuredImg = computed(() => config.works.find(w => w.featured)?.img || config.works[0]?.img)
+const config = siteData
+const featuredImg = computed(() => siteConfig.works.find(w => w.featured)?.img || siteConfig.works[0]?.img)
 
 function scrollTo(hash) {
   const el = document.querySelector(hash)

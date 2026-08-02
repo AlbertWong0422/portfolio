@@ -36,32 +36,46 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { siteConfig } from '../config.js'
+import { api } from '../api.js'
 
 defineEmits(['openLightbox'])
 
-const filters = [
-  { value: 'all',          label: '全部' },
-  { value: 'photo',        label: '摄影' },
-  { value: 'design',       label: '设计' },
-  { value: 'illustration', label: '插画' },
-  { value: 'other',        label: '其他' },
-]
+const defaultCatMap = { photo: '摄影', design: '设计', illustration: '插画', other: '其他' }
+const categoryLabel = (cat) => defaultCatMap[cat] || cat
 
-const catMap = { photo: '摄影', design: '设计', illustration: '插画', other: '其他' }
-const categoryLabel = (cat) => catMap[cat] || cat
-
+const works = ref(siteConfig.works)
 const activeFilter = ref('all')
+
+const filters = computed(() => {
+  const cats = [...new Set(works.value.map(w => w.category))]
+  return [
+    { value: 'all', label: '全部' },
+    ...cats.map(c => ({ value: c, label: defaultCatMap[c] || c }))
+  ]
+})
+
 const visibleWorks = computed(() =>
   activeFilter.value === 'all'
-    ? siteConfig.works
-    : siteConfig.works.filter(w => w.category === activeFilter.value)
+    ? works.value
+    : works.value.filter(w => w.category === activeFilter.value)
 )
 
 function setFilter(val) {
   activeFilter.value = val
 }
+
+onMounted(async () => {
+  try {
+    const data = await api.getWorks()
+    if (data && data.length > 0) {
+      works.value = [...data, ...siteConfig.works]
+    }
+  } catch {
+    // API 不可用时保留 config.js 的静态数据
+  }
+})
 </script>
 
 <style scoped>

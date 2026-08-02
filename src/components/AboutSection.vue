@@ -44,9 +44,9 @@
 
 <script setup>
 import { onMounted } from 'vue'
-import { siteConfig } from '../config.js'
+import { siteData } from '../store.js'
 
-const config = siteConfig
+const config = siteData
 
 onMounted(() => {
   const io = new IntersectionObserver(entries => {
@@ -70,8 +70,8 @@ onMounted(() => {
 .about-img-frame:hover img { transform: scale(1.04); }
 .about-img-accent { position: absolute; bottom: -1.5rem; right: -1.5rem; width: 70%; aspect-ratio: 1; border: 2px solid var(--accent); border-radius: var(--radius-lg); z-index: 0; }
 
-.about-intro { font-family: var(--font-serif); font-size: clamp(1.1rem,2.5vw,1.4rem); line-height: 1.6; margin-bottom: 1.25rem; }
-.about-body { font-size: .92rem; color: var(--ink-light); line-height: 1.75; margin-bottom: 1rem; }
+.about-intro { font-family: 'Alibaba PuHuiTi', var(--font-sans); font-size: clamp(1.1rem,2.5vw,1.4rem); line-height: 1.6; margin-bottom: 1.25rem; }
+.about-body { font-family: 'Alibaba PuHuiTi', var(--font-sans); font-size: .92rem; color: var(--ink-light); line-height: 1.75; margin-bottom: 1rem; }
 
 .about-tags { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1.5rem 0; }
 .tag { padding: .3rem .8rem; border: 1.5px solid var(--border); border-radius: 999px; font-size: .72rem; font-weight: 600; color: var(--ink-light); transition: all .2s; cursor: default; }

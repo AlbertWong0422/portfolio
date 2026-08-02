@@ -47,6 +47,11 @@ export const api = {
 
   changePassword: (data) => request('PUT', '/api/admin/password', data),
 
+  // 账号管理
+  getAccounts: () => request('GET', '/api/admin/accounts'),
+  createAccount: (data) => request('POST', '/api/admin/accounts', data),
+  deleteAccount: (id) => request('DELETE', `/api/admin/accounts/${id}`),
+
   // 图片上传（FormData，不用 JSON）
   uploadImage: async (file) => {
     const token = localStorage.getItem('admin_token')

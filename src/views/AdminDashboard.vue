@@ -45,12 +45,13 @@
             </div>
             <div class="form-field">
               <label>分类</label>
-              <select v-model="newWork.category">
+              <input v-model="newWork.category" list="cat-list" placeholder="输入或选择分类" />
+              <datalist id="cat-list">
                 <option value="photo">摄影</option>
                 <option value="design">设计</option>
                 <option value="illustration">插画</option>
                 <option value="other">其他</option>
-              </select>
+              </datalist>
             </div>
             <div class="form-field">
               <label>上传图片</label>
@@ -162,6 +163,31 @@
         </div>
       </section>
 
+      <!-- 账号管理 -->
+      <section v-if="activeTab === 'accounts'">
+        <div class="section-header">
+          <h2>账号管理</h2>
+        </div>
+
+        <div class="works-grid" style="grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));">
+          <div v-for="acc in accounts" :key="acc.id" class="work-card" style="padding:1rem;">
+            <div class="work-info">
+              <span class="work-title">{{ acc.username }}</span>
+              <span class="work-cat">ID: {{ acc.id }}</span>
+            </div>
+            <button class="del-btn" style="position:static;margin-top:.5rem;" @click="deleteAccount(acc.id, acc.username)">删除</button>
+          </div>
+        </div>
+
+        <h3 class="mt">添加新账号</h3>
+        <div class="form-grid narrow">
+          <div class="form-field full"><label>用户名</label><input v-model="newAccount.username" placeholder="新用户名" /></div>
+          <div class="form-field full"><label>密码</label><input type="password" v-model="newAccount.password" placeholder="至少6位" /></div>
+        </div>
+        <button class="btn-primary mt" @click="addAccount">添加账号</button>
+        <div v-if="accountMsg" class="save-msg">{{ accountMsg }}</div>
+      </section>
+
       <!-- 修改密码 -->
       <section v-if="activeTab === 'password'">
         <h2>修改密码</h2>
@@ -189,6 +215,7 @@ const tabs = [
   { key: 'profile',  label: '个人信息' },
   { key: 'resume',   label: '简历' },
   { key: 'messages', label: '留言' },
+  { key: 'accounts', label: '账号管理' },
   { key: 'password', label: '修改密码' },
 ]
 
@@ -283,6 +310,39 @@ async function deleteMsg(id) {
   await loadMessages()
 }
 
+// ── 账号管理 ──
+const accounts = ref([])
+const newAccount = reactive({ username: '', password: '' })
+const accountMsg = ref('')
+
+async function loadAccounts() {
+  accounts.value = await api.getAccounts()
+}
+
+async function addAccount() {
+  if (!newAccount.username || !newAccount.password) { accountMsg.value = '请填写用户名和密码'; return }
+  if (newAccount.password.length < 6) { accountMsg.value = '密码至少6位'; return }
+  try {
+    await api.createAccount({ username: newAccount.username, password: newAccount.password })
+    accountMsg.value = '添加成功 ✓'
+    Object.assign(newAccount, { username: '', password: '' })
+    await loadAccounts()
+  } catch (e) {
+    accountMsg.value = e.message
+  }
+  setTimeout(() => (accountMsg.value = ''), 3000)
+}
+
+async function deleteAccount(id, username) {
+  if (!confirm(`确认删除账号 "${username}"？`)) return
+  try {
+    await api.deleteAccount(id)
+    await loadAccounts()
+  } catch (e) {
+    alert(e.message)
+  }
+}
+
 // ── 密码 ──
 const pwd = reactive({ old: '', new1: '', new2: '' })
 const pwdMsg = ref('')
@@ -306,7 +366,7 @@ function logout() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadWorks(), loadProfile(), loadResume(), loadMessages()])
+  await Promise.all([loadWorks(), loadProfile(), loadResume(), loadMessages(), loadAccounts()])
 })
 </script>
 

@@ -24,11 +24,11 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { siteConfig } from '../config.js'
+import { siteData } from '../store.js'
 
 const props = defineProps({ activeSection: String, glass: Boolean })
 
-const config = siteConfig
+const config = siteData
 const scrolled = ref(false)
 const menuOpen = ref(false)
 const headerEl = ref(null)

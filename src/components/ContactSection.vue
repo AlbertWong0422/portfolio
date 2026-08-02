@@ -46,9 +46,10 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { siteConfig } from '../config.js'
+import { siteData } from '../store.js'
+import { api } from '../api.js'
 
-const config = siteConfig
+const config = siteData
 const toastVisible = ref(false)
 let toastTimer = null
 
@@ -74,10 +75,15 @@ async function submitForm() {
   if (errors.name || errors.email || errors.message) { formNote.value = '请填写所有必填项。'; return }
 
   submitting.value = true
-  await new Promise(r => setTimeout(r, 1200))  // 替换为真实 Formspree 请求
-  formNote.value = '消息已发送！感谢您的联系，我会尽快回复。'
-  Object.assign(form, { name: '', email: '', message: '' })
-  submitting.value = false
+  try {
+    await api.postMessage({ name: form.name, email: form.email, message: form.message })
+    formNote.value = '消息已发送！感谢您的联系，我会尽快回复。'
+    Object.assign(form, { name: '', email: '', message: '' })
+  } catch (e) {
+    formNote.value = '发送失败，请稍后重试。'
+  } finally {
+    submitting.value = false
+  }
 }
 
 onMounted(() => {
