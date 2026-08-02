@@ -66,6 +66,10 @@
               <label>图片 URL（或上传后自动填入）</label>
               <input v-model="newWork.img" placeholder="https://... 或上传后自动填入" />
             </div>
+            <div class="form-field full">
+              <label>作品描述（可选，预览时右侧显示）</label>
+              <textarea v-model="newWork.description" rows="3" placeholder="关于这个作品的描述..."></textarea>
+            </div>
             <div class="form-row">
               <label><input type="checkbox" v-model="newWork.featured" /> 设为精选（大图）</label>
               <label><input type="checkbox" v-model="newWork.tall" /> 高图（占两行）</label>
@@ -226,7 +230,7 @@ const catMap = { photo: '摄影', design: '设计', illustration: '插画', othe
 const works = ref([])
 const showAddWork = ref(false)
 const uploadProgress = ref('')
-const newWork = reactive({ title: '', category: 'photo', img: '', featured: false, tall: false })
+const newWork = reactive({ title: '', category: 'photo', img: '', description: '', featured: false, tall: false })
 
 async function loadWorks() {
   works.value = await api.getWorks()
@@ -247,7 +251,7 @@ async function onFileChange(e) {
 
 async function addWork() {
   await api.createWork({ ...newWork })
-  Object.assign(newWork, { title: '', category: 'photo', img: '', featured: false, tall: false })
+  Object.assign(newWork, { title: '', category: 'photo', img: '', description: '', featured: false, tall: false })
   showAddWork.value = false
   uploadProgress.value = ''
   await loadWorks()

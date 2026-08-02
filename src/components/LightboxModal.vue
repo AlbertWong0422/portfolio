@@ -1,11 +1,18 @@
 <template>
   <Teleport to="body">
     <dialog class="lightbox" ref="dialogEl" aria-label="图片预览" @click="onBackdropClick">
-      <div class="lightbox-inner" @click.stop>
-        <img class="lightbox-img" :src="current?.img" :alt="current?.title" />
-        <div class="lightbox-meta">
+      <div class="lightbox-inner" :class="{ 'has-desc': current?.description }" @click.stop>
+        <div class="lightbox-img-side">
+          <img class="lightbox-img" :src="current?.img" :alt="current?.title" />
+        </div>
+        <div v-if="current?.description" class="lightbox-desc-side">
           <span class="lightbox-cat">{{ catLabel(current?.category) }}</span>
-          <span class="lightbox-title">{{ current?.title }}</span>
+          <h3 class="lightbox-title">{{ current?.title }}</h3>
+          <p class="lightbox-desc">{{ current?.description }}</p>
+        </div>
+        <div v-else class="lightbox-meta">
+          <span class="lightbox-cat">{{ catLabel(current?.category) }}</span>
+          <span class="lightbox-title-inline">{{ current?.title }}</span>
         </div>
       </div>
       <button class="lb-btn lb-prev" @click.stop="prev" aria-label="上一张">&#8592;</button>
@@ -82,19 +89,36 @@ onUnmounted(() => {
   position: fixed; inset: 0; width: 100%; height: 100%;
   max-width: 100%; max-height: 100%;
   border: none; padding: 0;
-  /* 毛玻璃由父层 class 控制，此处用纯深色背景 */
   background: rgba(0,0,0,.92);
   display: none; align-items: center; justify-content: center;
 }
-/* 当 glass prop 为 true 时通过 JS 动态加 class 暂不需要，直接用原色即可 */
 .lightbox::backdrop { background: transparent; }
 .lightbox[open] { display: flex; }
 
-.lightbox-inner { position: relative; max-width: 90vw; max-height: 88vh; display: flex; flex-direction: column; align-items: center; gap: .75rem; }
+.lightbox-inner {
+  position: relative; max-width: 90vw; max-height: 88vh;
+  display: flex; flex-direction: column; align-items: center; gap: .75rem;
+}
+.lightbox-inner.has-desc {
+  flex-direction: row; align-items: stretch; gap: 2.5rem; max-width: 85vw;
+}
+
+.lightbox-img-side { display: flex; align-items: center; justify-content: center; }
+.has-desc .lightbox-img-side { flex: 1; min-width: 0; }
 .lightbox-img { max-width: 90vw; max-height: 82vh; width: auto; height: auto; border-radius: var(--radius-sm); object-fit: contain; display: block; }
+.has-desc .lightbox-img { max-width: 100%; max-height: 80vh; }
+
+.lightbox-desc-side {
+  flex: 0 0 280px; display: flex; flex-direction: column; justify-content: center;
+  padding: 1.5rem 0; color: rgba(255,255,255,.85);
+}
+.lightbox-desc-side .lightbox-cat { font-size: .62rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin-bottom: .5rem; }
+.lightbox-desc-side .lightbox-title { font-family: var(--font-serif); font-size: 1.3rem; color: #fff; font-weight: 700; margin-bottom: 1rem; }
+.lightbox-desc { font-size: .9rem; line-height: 1.7; color: rgba(255,255,255,.7); }
+
 .lightbox-meta { display: flex; gap: .75rem; align-items: center; }
 .lightbox-cat { font-size: .62rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
-.lightbox-title { font-size: .85rem; color: rgba(255,255,255,.7); font-weight: 500; }
+.lightbox-title-inline { font-size: .85rem; color: rgba(255,255,255,.7); font-weight: 500; }
 
 .lb-btn {
   position: fixed; top: 50%; transform: translateY(-50%);
@@ -114,6 +138,10 @@ onUnmounted(() => {
 }
 .lb-close:hover { background: rgba(255,255,255,.2); transform: scale(1.08); }
 
+@media (max-width: 768px) {
+  .lightbox-inner.has-desc { flex-direction: column; gap: 1rem; }
+  .lightbox-desc-side { flex: none; padding: 0 1rem; }
+}
 @media (max-width: 480px) {
   .lb-prev { left: .75rem; }
   .lb-next { right: .75rem; }

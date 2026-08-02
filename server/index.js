@@ -65,6 +65,7 @@ async function start() {
       category TEXT NOT NULL DEFAULT 'photo',
       title TEXT NOT NULL,
       img TEXT NOT NULL,
+      description TEXT DEFAULT '',
       featured INTEGER DEFAULT 0,
       tall INTEGER DEFAULT 0,
       sort_order INTEGER DEFAULT 0,
@@ -86,6 +87,9 @@ async function start() {
       created_at TEXT DEFAULT (datetime('now'))
     );
   `)
+
+  // 数据库迁移：给旧表加新列
+  try { db.run('ALTER TABLE works ADD COLUMN description TEXT DEFAULT ""') } catch {}
 
   // 初始化默认数据
   const adminExists = db.exec('SELECT id FROM admin WHERE id = 1')
@@ -246,21 +250,21 @@ async function start() {
   })
 
   app.post('/api/works', auth, (req, res) => {
-    const { category, title, img, featured, tall, sort_order } = req.body
+    const { category, title, img, description, featured, tall, sort_order } = req.body
     if (!title || !img) return res.status(400).json({ error: '标题和图片不能为空' })
     db.run(
-      'INSERT INTO works (category, title, img, featured, tall, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-      [category || 'photo', title, img, featured ? 1 : 0, tall ? 1 : 0, sort_order || 0]
+      'INSERT INTO works (category, title, img, description, featured, tall, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [category || 'photo', title, img, description || '', featured ? 1 : 0, tall ? 1 : 0, sort_order || 0]
     )
     saveDb()
     res.json({ ok: true })
   })
 
   app.put('/api/works/:id', auth, (req, res) => {
-    const { category, title, img, featured, tall, sort_order } = req.body
+    const { category, title, img, description, featured, tall, sort_order } = req.body
     db.run(
-      'UPDATE works SET category=?, title=?, img=?, featured=?, tall=?, sort_order=? WHERE id=?',
-      [category, title, img, featured ? 1 : 0, tall ? 1 : 0, sort_order || 0, req.params.id]
+      'UPDATE works SET category=?, title=?, img=?, description=?, featured=?, tall=?, sort_order=? WHERE id=?',
+      [category, title, img, description || '', featured ? 1 : 0, tall ? 1 : 0, sort_order || 0, req.params.id]
     )
     saveDb()
     res.json({ ok: true })
