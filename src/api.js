@@ -52,6 +52,11 @@ export const api = {
   createAccount: (data) => request('POST', '/api/admin/accounts', data),
   deleteAccount: (id) => request('DELETE', `/api/admin/accounts/${id}`),
 
+  // 分类管理
+  getCategories: () => request('GET', '/api/categories'),
+  createCategory: (data) => request('POST', '/api/categories', data),
+  deleteCategory: (id) => request('DELETE', `/api/categories/${id}`),
+
   // 图片上传（FormData，不用 JSON）
   uploadImage: async (file) => {
     const token = localStorage.getItem('admin_token')

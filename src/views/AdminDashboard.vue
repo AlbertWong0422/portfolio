@@ -45,13 +45,9 @@
             </div>
             <div class="form-field">
               <label>分类</label>
-              <input v-model="newWork.category" list="cat-list" placeholder="输入或选择分类" />
-              <datalist id="cat-list">
-                <option value="photo">摄影</option>
-                <option value="design">设计</option>
-                <option value="illustration">插画</option>
-                <option value="other">其他</option>
-              </datalist>
+              <select v-model="newWork.category">
+                <option v-for="cat in categories" :key="cat.id" :value="cat.name">{{ cat.name }}</option>
+              </select>
             </div>
             <div class="form-field">
               <label>上传图片</label>
@@ -80,6 +76,24 @@
             </div>
           </div>
         </div>
+      </section>
+
+      <!-- 分类管理 -->
+      <section v-if="activeTab === 'categories'">
+        <h2>分类管理</h2>
+        <div class="works-grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
+          <div v-for="cat in categories" :key="cat.id" class="work-card" style="padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;">
+            <span class="work-title">{{ cat.name }}</span>
+            <button class="del-btn" style="position:static;width:22px;height:22px;font-size:.65rem;" @click="deleteCategory(cat.id)">✕</button>
+          </div>
+        </div>
+        <div class="form-grid narrow mt">
+          <div class="form-field full" style="flex-direction:row;gap:.5rem;align-items:end;">
+            <input v-model="newCatName" placeholder="新分类名称" style="flex:1" />
+            <button class="btn-primary" @click="addCategory" :disabled="!newCatName.trim()">添加</button>
+          </div>
+        </div>
+        <div v-if="catMsg" class="save-msg">{{ catMsg }}</div>
       </section>
 
       <!-- 个人信息 -->
@@ -215,22 +229,51 @@ import { api } from '../api.js'
 const router = useRouter()
 
 const tabs = [
-  { key: 'works',    label: '作品管理' },
-  { key: 'profile',  label: '个人信息' },
-  { key: 'resume',   label: '简历' },
-  { key: 'messages', label: '留言' },
-  { key: 'accounts', label: '账号管理' },
-  { key: 'password', label: '修改密码' },
+  { key: 'works',      label: '作品管理' },
+  { key: 'categories', label: '分类管理' },
+  { key: 'profile',    label: '个人信息' },
+  { key: 'resume',     label: '简历' },
+  { key: 'messages',   label: '留言' },
+  { key: 'accounts',   label: '账号管理' },
+  { key: 'password',   label: '修改密码' },
 ]
 
 const activeTab = ref('works')
 const catMap = { photo: '摄影', design: '设计', illustration: '插画', other: '其他' }
 
+// ── 分类 ──
+const categories = ref([])
+const newCatName = ref('')
+const catMsg = ref('')
+
+async function loadCategories() {
+  categories.value = await api.getCategories()
+}
+
+async function addCategory() {
+  if (!newCatName.value.trim()) return
+  try {
+    await api.createCategory({ name: newCatName.value.trim() })
+    newCatName.value = ''
+    catMsg.value = '添加成功 ✓'
+    await loadCategories()
+  } catch (e) {
+    catMsg.value = e.message
+  }
+  setTimeout(() => (catMsg.value = ''), 2000)
+}
+
+async function deleteCategory(id) {
+  if (!confirm('确认删除该分类？')) return
+  await api.deleteCategory(id)
+  await loadCategories()
+}
+
 // ── 作品 ──
 const works = ref([])
 const showAddWork = ref(false)
 const uploadProgress = ref('')
-const newWork = reactive({ title: '', category: 'photo', img: '', description: '', featured: false, tall: false })
+const newWork = reactive({ title: '', category: '', img: '', description: '', featured: false, tall: false })
 
 async function loadWorks() {
   works.value = await api.getWorks()
@@ -251,7 +294,7 @@ async function onFileChange(e) {
 
 async function addWork() {
   await api.createWork({ ...newWork })
-  Object.assign(newWork, { title: '', category: 'photo', img: '', description: '', featured: false, tall: false })
+  Object.assign(newWork, { title: '', category: '', img: '', description: '', featured: false, tall: false })
   showAddWork.value = false
   uploadProgress.value = ''
   await loadWorks()
@@ -370,7 +413,7 @@ function logout() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadWorks(), loadProfile(), loadResume(), loadMessages(), loadAccounts()])
+  await Promise.all([loadWorks(), loadCategories(), loadProfile(), loadResume(), loadMessages(), loadAccounts()])
 })
 </script>
 

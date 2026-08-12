@@ -86,10 +86,24 @@ async function start() {
       read INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      sort_order INTEGER DEFAULT 0
+    );
   `)
 
   // 数据库迁移：给旧表加新列
   try { db.run('ALTER TABLE works ADD COLUMN description TEXT DEFAULT ""') } catch {}
+
+  // 初始化默认分类
+  const catExists = db.exec('SELECT id FROM categories LIMIT 1')
+  if (catExists.length === 0 || catExists[0].values.length === 0) {
+    db.run("INSERT OR IGNORE INTO categories (name, sort_order) VALUES ('摄影', 1)")
+    db.run("INSERT OR IGNORE INTO categories (name, sort_order) VALUES ('设计', 2)")
+    db.run("INSERT OR IGNORE INTO categories (name, sort_order) VALUES ('插画', 3)")
+    db.run("INSERT OR IGNORE INTO categories (name, sort_order) VALUES ('其他', 4)")
+  }
 
   // 初始化默认数据
   const adminExists = db.exec('SELECT id FROM admin WHERE id = 1')
@@ -282,6 +296,28 @@ async function start() {
   })
 
   // PLACEHOLDER_FINAL_ROUTES
+
+  // ── 分类管理 ─────────────────────────────────
+  app.get('/api/categories', (req, res) => {
+    const rows = getAll('SELECT * FROM categories ORDER BY sort_order ASC, id ASC')
+    res.json(rows)
+  })
+
+  app.post('/api/categories', auth, (req, res) => {
+    const { name } = req.body
+    if (!name || !name.trim()) return res.status(400).json({ error: '分类名称不能为空' })
+    const existing = getRow('SELECT id FROM categories WHERE name = ?', [name.trim()])
+    if (existing) return res.status(400).json({ error: '该分类已存在' })
+    db.run('INSERT INTO categories (name) VALUES (?)', [name.trim()])
+    saveDb()
+    res.json({ ok: true })
+  })
+
+  app.delete('/api/categories/:id', auth, (req, res) => {
+    db.run('DELETE FROM categories WHERE id = ?', [req.params.id])
+    saveDb()
+    res.json({ ok: true })
+  })
 
   // ── 图片上传 ─────────────────────────────────
   app.post('/api/upload', auth, upload.single('file'), (req, res) => {
