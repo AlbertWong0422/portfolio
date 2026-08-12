@@ -99,7 +99,10 @@ jobs:
           nginx -t && systemctl reload nginx || true
 
           # 重启 PM2
-          pm2 restart portfolio || pm2 start index.js --name portfolio
+          export UPLOADS_DIR=/var/www/portfolio/uploads
+          pm2 delete portfolio 2>/dev/null || true
+          cd /var/www/portfolio/server
+          UPLOADS_DIR=/var/www/portfolio/uploads pm2 start index.js --name portfolio --update-env
           pm2 save
 
           echo "✓ 部署完成"
