@@ -17,6 +17,13 @@ async function request(method, path, data) {
   })
 
   if (!res.ok) {
+    if (res.status === 401) {
+      // Token 过期或无效，清除本地 token 并跳转登录页
+      localStorage.removeItem('admin_token')
+      if (window.location.pathname !== '/admin/login') {
+        window.location.href = '/admin/login'
+      }
+    }
     const err = await res.json().catch(() => ({ error: res.statusText }))
     throw new Error(err.error || '请求失败')
   }

@@ -9,9 +9,20 @@ const cors = require('cors')
 
 const app = express()
 const PORT = process.env.PORT || 3000
-const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret-in-production'
 const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads')
 const DB_PATH = path.join(__dirname, 'db.sqlite')
+const SECRET_PATH = path.join(__dirname, '.jwt_secret')
+
+// JWT_SECRET 持久化：优先环境变量，否则从文件读取或生成
+let JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) {
+  if (fs.existsSync(SECRET_PATH)) {
+    JWT_SECRET = fs.readFileSync(SECRET_PATH, 'utf8').trim()
+  } else {
+    JWT_SECRET = require('crypto').randomBytes(32).toString('hex')
+    fs.writeFileSync(SECRET_PATH, JWT_SECRET, 'utf8')
+  }
+}
 
 let db
 
