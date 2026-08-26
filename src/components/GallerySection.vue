@@ -69,8 +69,9 @@ function setFilter(val) {
 onMounted(async () => {
   try {
     const data = await api.getWorks()
+    const showSamples = localStorage.getItem('showSampleWorks') !== 'false'
     if (data && data.length > 0) {
-      works.value = [...data, ...siteConfig.works]
+      works.value = showSamples ? [...data, ...siteConfig.works] : data
     }
   } catch {
     // API 不可用时保留 config.js 的静态数据

@@ -106,10 +106,12 @@ async function start() {
 
   // 数据库迁移：给旧表加新列
   try { db.run('ALTER TABLE works ADD COLUMN description TEXT DEFAULT ""') } catch {}
+  try { db.run('ALTER TABLE works ADD COLUMN is_sample INTEGER DEFAULT 0') } catch {}
 
   // 初始化默认分类
   const catExists = db.exec('SELECT id FROM categories LIMIT 1')
   if (catExists.length === 0 || catExists[0].values.length === 0) {
+    db.run("INSERT OR IGNORE INTO categories (name, sort_order) VALUES ('未分类', 0)")
     db.run("INSERT OR IGNORE INTO categories (name, sort_order) VALUES ('摄影', 1)")
     db.run("INSERT OR IGNORE INTO categories (name, sort_order) VALUES ('设计', 2)")
     db.run("INSERT OR IGNORE INTO categories (name, sort_order) VALUES ('插画', 3)")

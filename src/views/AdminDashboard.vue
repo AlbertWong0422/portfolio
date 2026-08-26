@@ -17,21 +17,72 @@
       <section v-if="activeTab === 'works'">
         <div class="section-header">
           <h2>作品管理</h2>
-          <button class="btn-primary" @click="showAddWork = true">+ 添加作品</button>
+          <div style="display:flex;gap:.5rem;">
+            <button class="btn-primary" @click="showAddWork = true">+ 添加作品</button>
+            <button class="btn-secondary" @click="triggerBatchUpload">批量上传</button>
+            <input ref="batchFileInput" type="file" accept="image/*" multiple style="display:none" @change="onBatchUpload" />
+          </div>
         </div>
 
+        <!-- 分类筛选 -->
+        <div class="category-filter">
+          <button
+            :class="['filter-btn', { active: selectedCategory === 'all' }]"
+            @click="selectedCategory = 'all'">
+            全部 ({{ works.length }})
+          </button>
+          <button
+            v-for="cat in categories"
+            :key="cat.id"
+            :class="['filter-btn', { active: selectedCategory === cat.name }]"
+            @click="selectedCategory = cat.name">
+            {{ cat.name }} ({{ worksByCategory[cat.name]?.length || 0 }})
+          </button>
+          <label class="sample-toggle">
+            <input type="checkbox" v-model="showSampleWorks" />
+            <span>显示示例作品</span>
+          </label>
+        </div>
+
+        <!-- 作品列表 -->
         <div class="works-grid">
-          <div v-for="work in works" :key="work.id" class="work-card">
+          <div v-for="work in filteredWorks" :key="work.id" class="work-card" @click="openWorkDetail(work)">
             <img :src="work.img" :alt="work.title" />
             <div class="work-info">
-              <span class="work-cat">{{ catMap[work.category] || work.category }}</span>
               <span class="work-title">{{ work.title }}</span>
               <div class="work-flags">
                 <span v-if="work.featured" class="flag">精选</span>
                 <span v-if="work.tall" class="flag">高图</span>
               </div>
             </div>
-            <button class="del-btn" @click="deleteWork(work.id)">删除</button>
+            <div class="work-hover-actions">
+              <button class="hover-edit-btn" @click.stop="openEditWork(work)">编辑</button>
+              <button class="hover-del-btn" @click.stop="deleteWork(work.id)">删除</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 作品详情弹窗 -->
+        <div v-if="showWorkDetail" class="modal-mask" @click.self="showWorkDetail = false">
+          <div class="modal detail-modal">
+            <button class="modal-close" @click="showWorkDetail = false">✕</button>
+            <div class="detail-content">
+              <img :src="detailWork.img" class="detail-img" />
+              <div class="detail-info">
+                <h3>{{ detailWork.title }}</h3>
+                <div class="detail-meta">
+                  <span class="meta-item">分类：{{ detailWork.category }}</span>
+                  <span v-if="detailWork.featured" class="meta-badge">精选</span>
+                  <span v-if="detailWork.tall" class="meta-badge">高图</span>
+                </div>
+                <p v-if="detailWork.description" class="detail-desc">{{ detailWork.description }}</p>
+                <p v-else class="detail-desc empty">暂无描述</p>
+              </div>
+            </div>
+            <div class="detail-actions">
+              <button class="btn-edit" @click="editFromDetail">编辑</button>
+              <button class="btn-delete" @click="deleteFromDetail">删除</button>
+            </div>
           </div>
         </div>
 
@@ -73,6 +124,39 @@
             <div class="modal-actions">
               <button class="btn-primary" @click="addWork" :disabled="!newWork.title || !newWork.img">保存</button>
               <button @click="showAddWork = false">取消</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 编辑作品弹窗 -->
+        <div v-if="showEditWork" class="modal-mask" @click.self="showEditWork = false">
+          <div class="modal">
+            <h3>编辑作品</h3>
+            <div class="form-field">
+              <label>标题</label>
+              <input v-model="editWork.title" placeholder="作品标题" />
+            </div>
+            <div class="form-field">
+              <label>分类</label>
+              <select v-model="editWork.category">
+                <option v-for="cat in categories" :key="cat.id" :value="cat.name">{{ cat.name }}</option>
+              </select>
+            </div>
+            <div class="form-field full">
+              <label>作品描述（可选）</label>
+              <textarea v-model="editWork.description" rows="3" placeholder="关于这个作品的描述..."></textarea>
+            </div>
+            <div class="form-field">
+              <label>图片预览</label>
+              <img :src="editWork.img" style="max-height:150px;border-radius:4px" />
+            </div>
+            <div class="form-row">
+              <label><input type="checkbox" v-model="editWork.featured" /> 设为精选（大图）</label>
+              <label><input type="checkbox" v-model="editWork.tall" /> 高图（占两行）</label>
+            </div>
+            <div class="modal-actions">
+              <button class="btn-primary" @click="updateWork">保存修改</button>
+              <button @click="showEditWork = false">取消</button>
             </div>
           </div>
         </div>
@@ -222,7 +306,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api.js'
 
@@ -272,8 +356,34 @@ async function deleteCategory(id) {
 // ── 作品 ──
 const works = ref([])
 const showAddWork = ref(false)
+const showEditWork = ref(false)
+const showWorkDetail = ref(false)
 const uploadProgress = ref('')
+const batchFileInput = ref(null)
+const selectedCategory = ref('all')
+const showSampleWorks = ref(localStorage.getItem('showSampleWorks') !== 'false')
 const newWork = reactive({ title: '', category: '', img: '', description: '', featured: false, tall: false })
+const editWork = reactive({ id: null, title: '', category: '', img: '', description: '', featured: false, tall: false })
+const detailWork = reactive({ id: null, title: '', category: '', img: '', description: '', featured: false, tall: false })
+
+// 按分类分组作品
+const worksByCategory = computed(() => {
+  const grouped = {}
+  const filtered = showSampleWorks.value ? works.value : works.value.filter(w => !w.is_sample)
+  filtered.forEach(work => {
+    const cat = work.category || '未分类'
+    if (!grouped[cat]) grouped[cat] = []
+    grouped[cat].push(work)
+  })
+  return grouped
+})
+
+// 根据选中的分类过滤作品
+const filteredWorks = computed(() => {
+  const filtered = showSampleWorks.value ? works.value : works.value.filter(w => !w.is_sample)
+  if (selectedCategory.value === 'all') return filtered
+  return filtered.filter(w => (w.category || '未分类') === selectedCategory.value)
+})
 
 async function loadWorks() {
   works.value = await api.getWorks()
@@ -300,9 +410,99 @@ async function addWork() {
   await loadWorks()
 }
 
+function openEditWork(work) {
+  Object.assign(editWork, {
+    id: work.id,
+    title: work.title,
+    category: work.category,
+    img: work.img,
+    description: work.description || '',
+    featured: !!work.featured,
+    tall: !!work.tall
+  })
+  showEditWork.value = true
+}
+
+async function updateWork() {
+  await api.updateWork(editWork.id, {
+    title: editWork.title,
+    category: editWork.category,
+    img: editWork.img,
+    description: editWork.description,
+    featured: editWork.featured,
+    tall: editWork.tall
+  })
+  showEditWork.value = false
+  await loadWorks()
+}
+
 async function deleteWork(id) {
   if (!confirm('确认删除这个作品？')) return
   await api.deleteWork(id)
+  await loadWorks()
+}
+
+function openWorkDetail(work) {
+  Object.assign(detailWork, {
+    id: work.id,
+    title: work.title,
+    category: work.category,
+    img: work.img,
+    description: work.description || '',
+    featured: !!work.featured,
+    tall: !!work.tall
+  })
+  showWorkDetail.value = true
+}
+
+function editFromDetail() {
+  showWorkDetail.value = false
+  openEditWork(detailWork)
+}
+
+async function deleteFromDetail() {
+  showWorkDetail.value = false
+  await deleteWork(detailWork.id)
+}
+
+function triggerBatchUpload() {
+  batchFileInput.value?.click()
+}
+
+async function onBatchUpload(e) {
+  const files = Array.from(e.target.files)
+  if (!files.length) return
+
+  const total = files.length
+  let completed = 0
+  uploadProgress.value = `批量上传中 0/${total}...`
+
+  for (const file of files) {
+    try {
+      // 上传图片
+      const { url } = await api.uploadImage(file)
+
+      // 创建作品，标题用文件名（去掉扩展名），分类"未分类"
+      const title = file.name.replace(/\.[^.]+$/, '')
+      await api.createWork({
+        title,
+        category: '未分类',
+        img: url,
+        description: '',
+        featured: false,
+        tall: false
+      })
+
+      completed++
+      uploadProgress.value = `批量上传中 ${completed}/${total}...`
+    } catch (err) {
+      console.error('上传失败:', file.name, err)
+    }
+  }
+
+  uploadProgress.value = `批量上传完成 ✓ (${completed}/${total})`
+  setTimeout(() => (uploadProgress.value = ''), 3000)
+  e.target.value = '' // 清空文件选择
   await loadWorks()
 }
 
@@ -415,6 +615,11 @@ function logout() {
 onMounted(async () => {
   await Promise.all([loadWorks(), loadCategories(), loadProfile(), loadResume(), loadMessages(), loadAccounts()])
 })
+
+// 监听示例作品开关，同步到 localStorage
+watch(showSampleWorks, (val) => {
+  localStorage.setItem('showSampleWorks', String(val))
+})
 </script>
 
 <style scoped>
@@ -442,19 +647,53 @@ h3 { font-size: .95rem; font-weight: 600; margin: 1.5rem 0 .75rem; color: var(--
 
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
 
+.category-section { margin-bottom: 2rem; }
+.category-title { font-size: 1.1rem; font-weight: 600; color: var(--ink); margin-bottom: 1rem; padding-bottom: .5rem; border-bottom: 2px solid #e5e7eb; }
+.category-filter { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid #e5e7eb; align-items: center; }
+.filter-btn { padding: .5rem 1rem; background: #f3f4f6; color: #6b7280; border: none; border-radius: 6px; font-size: .85rem; cursor: pointer; transition: all .2s; }
+.filter-btn:hover { background: #e5e7eb; }
+.filter-btn.active { background: var(--ink); color: #fff; }
+.sample-toggle { display: flex; align-items: center; gap: .4rem; margin-left: auto; font-size: .85rem; color: #6b7280; cursor: pointer; }
+.sample-toggle input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
 .works-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
-.work-card { background: #fff; border-radius: 8px; overflow: hidden; position: relative; }
+.work-card { background: #fff; border-radius: 8px; overflow: hidden; position: relative; cursor: pointer; transition: transform .2s, box-shadow .2s; }
+.work-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+.work-card:hover .work-hover-actions { opacity: 1; }
 .work-card img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; }
+.work-hover-actions { position: absolute; top: .5rem; right: .5rem; display: flex; gap: .35rem; opacity: 0; transition: opacity .2s; }
+.hover-edit-btn { width: 50px; height: 26px; border-radius: 13px; background: rgba(59,130,246,.95); color: #fff; font-size: .7rem; border: none; cursor: pointer; transition: background .2s; }
+.hover-edit-btn:hover { background: rgba(59,130,246,1); }
+.hover-del-btn { width: 50px; height: 26px; border-radius: 13px; background: rgba(239,68,68,.95); color: #fff; font-size: .7rem; border: none; cursor: pointer; transition: background .2s; }
+.hover-del-btn:hover { background: rgba(239,68,68,1); }
 .work-info { padding: .5rem .75rem; }
 .work-cat { font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); display: block; }
 .work-title { font-size: .82rem; font-weight: 600; display: block; }
 .work-flags { display: flex; gap: .25rem; margin-top: .25rem; }
 .flag { font-size: .6rem; padding: .15rem .4rem; background: var(--accent); color: #fff; border-radius: 2px; }
-.del-btn { position: absolute; top: .5rem; right: .5rem; width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: .75rem; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.work-actions { position: absolute; top: .5rem; right: .5rem; display: flex; gap: .35rem; }
+.edit-btn { width: 50px; height: 26px; border-radius: 13px; background: rgba(59,130,246,.9); color: #fff; font-size: .7rem; border: none; cursor: pointer; transition: background .2s; }
+.edit-btn:hover { background: rgba(59,130,246,1); }
+.del-btn { width: 50px; height: 26px; border-radius: 13px; background: rgba(239,68,68,.9); color: #fff; font-size: .7rem; border: none; cursor: pointer; transition: background .2s; }
+.del-btn:hover { background: rgba(239,68,68,1); }
 
 .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.modal { background: #fff; border-radius: 12px; padding: 2rem; width: 480px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+.modal { background: #fff; border-radius: 12px; padding: 2rem; width: 480px; max-width: 95vw; max-height: 90vh; overflow-y: auto; position: relative; }
 .modal h3 { margin-bottom: 1.25rem; }
+.modal-close { position: absolute; top: 1rem; right: 1rem; width: 32px; height: 32px; border-radius: 50%; background: #f3f4f6; border: none; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6b7280; transition: background .2s; z-index: 10; }
+.modal-close:hover { background: #e5e7eb; }
+.detail-modal { width: 560px; padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+.detail-content { flex: 1; overflow-y: auto; padding: 3.5rem 2rem 1rem; }
+.detail-img { width: 100%; border-radius: 8px; margin-bottom: 1.5rem; }
+.detail-info h3 { font-size: 1.3rem; margin-bottom: .75rem; }
+.detail-meta { display: flex; gap: .75rem; align-items: center; margin-bottom: 1rem; font-size: .85rem; color: #6b7280; }
+.meta-badge { padding: .25rem .5rem; background: var(--ink); color: #fff; border-radius: 4px; font-size: .75rem; }
+.detail-desc { color: #4b5563; line-height: 1.6; margin-bottom: 1.5rem; }
+.detail-desc.empty { color: #9ca3af; font-style: italic; }
+.detail-actions { display: flex; gap: .75rem; padding: 1rem 2rem; border-top: 1px solid #e5e7eb; background: #fff; }
+.btn-edit { flex: 1; padding: .75rem; background: rgba(59,130,246,.9); color: #fff; border: none; border-radius: 6px; font-size: .9rem; font-weight: 600; cursor: pointer; transition: background .2s; }
+.btn-edit:hover { background: rgba(59,130,246,1); }
+.btn-delete { flex: 1; padding: .75rem; background: rgba(239,68,68,.9); color: #fff; border: none; border-radius: 6px; font-size: .9rem; font-weight: 600; cursor: pointer; transition: background .2s; }
+.btn-delete:hover { background: rgba(239,68,68,1); }
 .modal-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
 
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
@@ -491,6 +730,8 @@ h3 { font-size: .95rem; font-weight: 600; margin: 1.5rem 0 .75rem; color: var(--
 .btn-primary { padding: .65rem 1.5rem; background: var(--ink); color: #fff; border: none; border-radius: 6px; font-size: .85rem; font-weight: 600; cursor: pointer; transition: opacity .2s; }
 .btn-primary:hover:not(:disabled) { opacity: .85; }
 .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.btn-secondary { padding: .65rem 1.5rem; background: #6b7280; color: #fff; border: none; border-radius: 6px; font-size: .85rem; font-weight: 600; cursor: pointer; transition: opacity .2s; }
+.btn-secondary:hover { opacity: .85; }
 .mt { margin-top: 1.5rem; }
 
 @media (max-width: 640px) {
